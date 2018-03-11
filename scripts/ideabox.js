@@ -1,5 +1,5 @@
-//Local Variables
-var ideas = [];
+//Global Variables
+var ideas = [] ;
 var localStorageKey = "localStorageKey";
 
 //On load
@@ -9,7 +9,7 @@ $(document).ready(function() {
 })
 
 //Idea constructor
-function IdeaObjectCreator(saveIdeaTitle, saveIdeaBody) {
+function IdeaTemplate(saveIdeaTitle, saveIdeaBody) {
   this.title = saveIdeaTitle;
   this.body = saveIdeaBody;
   this.quality = 'swill';
@@ -20,18 +20,15 @@ function IdeaObjectCreator(saveIdeaTitle, saveIdeaBody) {
 function saveIdea() {
   var saveIdeaTitle = $('#title-field').val();
   var saveIdeaBody = $('#body-field').val();
-  var idNumber = new IdeaObjectCreator(saveIdeaTitle, saveIdeaBody);
+  var idNumber = new IdeaTemplate(saveIdeaTitle, saveIdeaBody);
   ideas.push(idNumber);
-  console.log(ideas);
-  var stringIdeas = JSON.stringify(ideas);
-  localStorage.setItem(localStorageKey, stringIdeas);
+  setToStorage();
 }
 
 //Grabs idea out of local storage and updates array
 function grabIdea() {
   var storedIdea = localStorage.getItem(localStorageKey);
   var parsedIdea = JSON.parse(storedIdea);
-  console.log(parsedIdea);
   ideas = parsedIdea || [];
 }
 
@@ -46,8 +43,7 @@ function createTemplate() {
   $('#idea-placement').html('');
   ideas.forEach(function(object) {
     $('#idea-placement').prepend(
-      `
-      <article aria-label="Idea card" class="object-container" id="${object.id}">
+      `<article aria-label="Idea card" class="object-container" id="${object.id}">
         <div class="flex-container">
           <h2 class="entry-title" contenteditable="true">${object.title}</h2>
           <div role="button" class="delete-button"></div>
@@ -55,14 +51,16 @@ function createTemplate() {
         <p class="entry-body" contenteditable="true">${object.body}</p>
         <div role="button" class="up-arrow" alt="upvote button"></div>
         <div role="button" class="down-arrow" alt="downvote button"></div>
-        <p class="quality-rank">quality: <span class="open-sans">${object.quality}</span></p>
+        <p class="quality-rank">quality: 
+          <span class="open-sans">${object.quality}</span>
+        </p>
       </article>`
     );
   });
 }
 
 // prepend the template function
-function attachTemplate() {
+function attachTemplate(event) {
   event.preventDefault();
   saveIdea();
   grabIdea();
@@ -78,16 +76,15 @@ function clearInputs() {
 }
 
 function deleteIdea() {
-  var grandParentId = $(this).parent().parent().attr('id');
-  for (var i = 0; i < ideas.length; i++) {
-    var ideaId = ideas[i].id
-    if (grandParentId == ideaId) {
-      ideas.splice(i, 1);
-      var stringIdeas = JSON.stringify(ideas);
-      localStorage.setItem(localStorageKey, stringIdeas);
+  var grandParentId = $(this).closest('article').attr('id');
+  var stringIdeas;
+  ideas.forEach(function(item) {
+    if (grandParentId == item.id) {
+      ideas.splice(item, 1);
+      setToStorage();
     }
-  }
-  $(this).parent().parent().remove();
+  });
+  $(this).closest('article').remove();
 }
 
 // Arrow button functionality
@@ -118,33 +115,29 @@ function downVoteIdea(ideaQuality) {
   }
 }
 
-function upVoteIdeaStorage(ideaQuality) {
+function upVoteIdeaStorage() {
   var grandParentId = $(this).parent()[0].id;
-  for (var i = 0; i < ideas.length; i++) {
-    var ideaId = ideas[i].id;
-    if (grandParentId == ideaId && ideas[i].quality == 'swill') {
-      ideas[i].quality = 'plausible';
-    } else if (grandParentId == ideaId && ideas[i].quality == 'plausible') {
-      ideas[i].quality = 'genius';
+  ideas.forEach(function (item) {
+    if (grandParentId == item.id && item.quality == 'swill') {
+      item.quality = 'plausible';
+    } else if (grandParentId == item.id && item.quality == 'plausible') {
+      item.quality = 'genius';
     }
-    var stringIdeas = JSON.stringify(ideas);
-    localStorage.setItem(localStorageKey, stringIdeas);
-  }
+  });
+  setToStorage();
 }
 
 function downVoteIdeaStorage() {
   var grandParentId = $(this).parent()[0].id;
-  for (var i = 0; i < ideas.length; i++) {
-    var ideaId = ideas[i].id;
-    if (grandParentId == ideaId && ideas[i].quality == 'genius') {
-      ideas[i].quality = 'plausible';
-    } else if (grandParentId == ideaId && ideas[i].quality == 'plausible') {
-      ideas[i].quality = 'swill';
+  ideas.forEach(function (item) {
+    if (grandParentId == item.id && item.quality == 'genius') {
+      item.quality = 'plausible';
+    } else if (grandParentId == item.id && item.quality == 'plausible') {
+      item.quality = 'swill';
     }
-    var stringIdeas = JSON.stringify(ideas);
-    localStorage.setItem(localStorageKey, stringIdeas);
+  });
+  setToStorage();
   }
-}
 
 //Search function and Event
 $('#search-field').on('keyup', function() {
@@ -162,7 +155,7 @@ $('#search-field').on('keyup', function() {
   })
 });
 
-// Editable
+// Editable 
 $('#idea-placement').on('blur', '.entry-title', function(e) {
     var newTitle = $(this).text();
     editableTitle(this, newTitle);
@@ -177,8 +170,7 @@ function editableTitle(location, newText) {
             return object.title;
         }
     });
-    stringIdeas = JSON.stringify(ideas);
-    localStorage.setItem(localStorageKey, stringIdeas);
+  setToStorage();
 }
 
 $('#idea-placement').on('blur', '.entry-body', function(e) {
@@ -195,8 +187,7 @@ function editableBody(location, newText) {
             return object.body;
         }
     });
-    stringIdeas = JSON.stringify(ideas);
-    localStorage.setItem(localStorageKey, stringIdeas);
+  setToStorage();
 }
 
 // Expanding Text Area
@@ -213,3 +204,12 @@ var expandingTextArea = (function(){
     el.style.height = el.scrollHeight+'px';
   }
 })()
+
+function setToStorage() {
+   var stringIdeas = JSON.stringify(ideas);
+   localStorage.setItem(localStorageKey, stringIdeas);
+}
+
+
+
+
